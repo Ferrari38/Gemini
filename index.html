@@ -9,9 +9,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <style>
-    header {
-      display: none;
-    }
     * {
       box-sizing: border-box;
     }
@@ -30,12 +27,6 @@
       margin: auto;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
       margin-bottom: 20px;
-    }
-    .readme-section {
-      background: #fff;
-      padding: 15px;
-      border-radius: 8px;
-      border: 1px solid #ddd;
     }
     h2 {
       font-size: 22px;
@@ -79,6 +70,7 @@
     .btn-danger { background-color: #dc3545; padding: 8px; font-size: 14px; }
     .btn-danger:hover { background-color: #bd2130; }
 
+    /* กรอบสีเขียวสำหรับแสดงผลลัพธ์ */
     .result {
       margin-top: 20px;
       background: #e6ffe6;
@@ -87,9 +79,9 @@
       color: #006600;
       font-size: 14px;
       line-height: 1.6;
+      display: none; /* ซ่อนไว้ก่อนคำนวณ */
     }
     
-    /* สไตล์ส่วนตารางประวัติ */
     .history-table {
       width: 100%;
       border-collapse: collapse;
@@ -138,15 +130,8 @@
 </head>
 <body>
 
-  <!-- ส่วนคำอธิบายแอป (README) -->
-  <div class="container readme-section">
-    <h2>Daily Income Calculator</h2>
-    <p>ระบบคำนวณรายรับ-รายจ่ายรายวัน หักค่าคอมมิชชั่น BOLT 19.26% พร้อมระบบบันทึกประวัติย้อนหลังในเครื่อง</p>
-  </div>
-
-  <!-- ส่วนของตัวโปรแกรมคำนวณ -->
-  <div class="container" id="calculator-box">
-    <h2>คำนวณรายได้ประจำวัน</h2>
+  <!-- ส่วนของตัวโปรแกรมคำนวณ (เริ่มจากวันที่ทันที) -->
+  <div class="container">
     <label>วันที่:</label>
     <input type="date" id="date" />
     
@@ -179,6 +164,7 @@
     <button class="btn-save" onclick="saveAsPNG()">บันทึกรูปภาพสรุปผล (PNG)</button>
     <button class="btn-reset" onclick="resetForm()">ล้างหน้าจอ</button>
     
+    <!-- กรอบสีเขียวที่จะถูกดึงไปเซฟเป็นไฟล์ภาพ -->
     <div class="result" id="result"></div>
   </div>
 
@@ -198,15 +184,14 @@
             <th>จัดการ</th>
           </tr>
         </thead>
-          <tbody id="history-list">
-            <!-- ข้อมูลประวัติจะถูกใส่เข้ามาด้วย JavaScript -->
-          </tbody>
+        <tbody id="history-list">
+          <!-- ข้อมูลประวัติจะถูกใส่เข้ามาด้วย JavaScript -->
+        </tbody>
       </table>
     </div>
   </div>
 
   <script>
-    // โหลดประวัติเมื่อเปิดหน้าเว็บครั้งแรก
     document.addEventListener("DOMContentLoaded", function() {
       // ตั้งค่าวันที่ปัจจุบันในช่อง Input เป็นค่าเริ่มต้น
       const today = new Date().toISOString().split('T')[0];
@@ -254,7 +239,7 @@
       const halfIncome = (netIncome / 2).toFixed(2);
       const costPerKm = distance > 0 ? (totalIncomeBeforeCommission / distance).toFixed(2) : "0.00";
 
-      // แสดงผลบนหน้าจอ
+      // แสดงผลบนหน้าจอและเปิดกล่องสีเขียว
       renderResultHTML(date, grab, bolt, boltCommission, boltAfter, extraIncome, tip, totalIncomeBeforeCommission, totalIncomeBeforeMaintenance, maintenance, oil, otherExpense, totalExpenses, netIncome, halfIncomePlusMaintenance, halfIncome, distance, costPerKm);
 
       // บันทึกลง LocalStorage
@@ -267,8 +252,9 @@
 
     function renderResultHTML(date, grab, bolt, boltCommission, boltAfter, extraIncome, tip, totalIncomeBeforeCommission, totalIncomeBeforeMaintenance, maintenance, oil, otherExpense, totalExpenses, netIncome, halfIncomePlusMaintenance, halfIncome, distance, costPerKm) {
       const format = n => n.toLocaleString(undefined, { minimumFractionDigits: 2 });
+      const resultDiv = document.getElementById('result');
       
-      const resultHTML = `
+      resultDiv.innerHTML = `
         <strong>สรุปผลประจำวันที่: ${date}</strong><br><br>
         <strong>รายรับ</strong><br>
         GRAB: ${format(grab)} บาท<br>
@@ -290,24 +276,18 @@
         ระยะทางที่ใช้: ${distance} กม.<br>
         บาทต่อกิโลเมตร: ${costPerKm} บาท/กม.
       `;
-      document.getElementById('result').innerHTML = resultHTML;
+      resultDiv.style.display = 'block'; // แสดงผลกล่องสีเขียว
     }
 
-    // ฟังก์ชันจัดการคลังข้อมูล LocalStorage
     function saveToLocalStorage(newRecord) {
       let history = JSON.parse(localStorage.getItem("income_history")) || [];
-      
-      // ค้นหาว่าเคยมีข้อมูลของวันนี้อยู่แล้วหรือยัง ถ้ามีให้เขียนทับ (อัปเดตข้อมูลเก่า)
       const existingIndex = history.findIndex(item => item.date === newRecord.date);
       if (existingIndex !== -1) {
         history[existingIndex] = newRecord;
       } else {
         history.push(newRecord);
       }
-      
-      // เรียงลำดับวันที่จากใหม่ล่าสุดไปเก่า
       history.sort((a, b) => new Date(b.date) - new Date(a.date));
-      
       localStorage.setItem("income_history", JSON.stringify(history));
       displayHistory();
     }
@@ -341,7 +321,6 @@
       const history = JSON.parse(localStorage.getItem("income_history")) || [];
       const item = history[index];
 
-      // โหลดข้อมูลกลับเข้าแบบฟอร์ม Input
       document.getElementById('date').value = item.date;
       document.getElementById('grab').value = item.grab || '';
       document.getElementById('bolt').value = item.bolt || '';
@@ -353,10 +332,7 @@
       document.getElementById('endKm').value = item.endKm || '';
       document.getElementById('distance1').value = item.distance1 || '';
 
-      // สั่งคำนวณอีกครั้งเพื่อโชว์สรุปผลสีเขียว
       calculateAndSave();
-      
-      // เลื่อนหน้าจอกลับขึ้นไปด้านบนเพื่อให้เห็นผลลัพธ์
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -373,21 +349,29 @@
       if (confirm("⚠️ คุณต้องการลบประวัติทั้งหมดใช่หรือไม่? ข้อมูลนี้ไม่สามารถกู้คืนได้")) {
         localStorage.removeItem("income_history");
         displayHistory();
+        document.getElementById('result').style.display = 'none';
         document.getElementById('result').innerHTML = '';
       }
     }
 
-    // ฟังก์ชันเซฟภาพสรุปผล PNG
+    // ฟังก์ชันสำคัญ: บันทึกภาพเฉพาะกรอบสีเขียวผลลัพธ์เท่านั้น
     function saveAsPNG() {
-      const target = document.getElementById('calculator-box');
+      const target = document.getElementById('result');
+      
+      // ตรวจสอบว่ามีข้อมูลผลลัพธ์แสดงอยู่หรือไม่ก่อนเซฟภาพ
+      if (target.innerHTML === "" || target.style.display === 'none') {
+        alert("กรุณากด 'คำนวณและบันทึกประวัติ' เพื่อให้ระบบสร้างสรุปผลก่อนบันทึกรูปภาพ");
+        return;
+      }
+      
       html2canvas(target, {
         scale: 2, 
         useCORS: true,
-        backgroundColor: "#ffffff"
+        backgroundColor: "#e6ffe6" // ตั้งค่าพื้นหลังเป็นสีเขียวอ่อนตามธีมสรุปผล
       }).then(canvas => {
         const link = document.createElement('a');
         const dateInput = document.getElementById('date').value || 'daily-summary';
-        link.download = `รายได้ประจำวัน_${dateInput}.png`;
+        link.download = `สรุปรายได้_${dateInput}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
       }).catch(err => {
@@ -398,9 +382,10 @@
 
     function resetForm() {
       document.querySelectorAll('input:not(#date)').forEach(input => input.value = '');
-      document.getElementById('result').innerHTML = '';
+      const resultDiv = document.getElementById('result');
+      resultDiv.style.display = 'none';
+      resultDiv.innerHTML = '';
     }
   </script>
 </body>
-  </html>
-  
+</html>
